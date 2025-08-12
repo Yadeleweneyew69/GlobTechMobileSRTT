@@ -409,6 +409,14 @@
         text-align: center;
       }
 
+      .audio-processing-info {
+        background-color: #e3f2fd;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+      }
+
       @media (min-width: 768px) {
         .container {
           max-width: 900px;
@@ -601,6 +609,9 @@
           <option value="default">Default</option>
         </select>
         <div id="audioVisualizer"></div>
+        <div class="audio-processing-info" id="audioProcessingInfo">
+          <strong>Audio Processing:</strong> <span id="audioProcessingStatus">Inactive</span>
+        </div>
       </div>
     </div>
     <footer>
@@ -1073,6 +1084,7 @@
         const audioVisualizer = document.getElementById("audioVisualizer");
         const androidWarning = document.getElementById("androidWarning");
         const audioInputSelect = document.getElementById("audioInputSelect");
+        const audioProcessingStatus = document.getElementById("audioProcessingStatus");
 
         // Show Android-specific instructions
         if (isAndroid()) {
@@ -1110,6 +1122,8 @@
         let audioChunks = [];
         let lastConfidence = 0;
         let lastFinalTranscript = "";
+        let touchStartX = 0;
+        let touchEndX = 0;
 
         // Check for browser support
         if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
@@ -1335,11 +1349,13 @@
           try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             console.log("Audio context created.");
+            audioProcessingStatus.textContent = "Ready";
             return true;
           } catch (e) {
             console.error("Web Audio API not supported.", e);
             status.innerHTML =
               '<span style="color:red;">Web Audio API not supported in your browser.</span>';
+            audioProcessingStatus.textContent = "Not supported";
             return false;
           }
         }
@@ -1372,22 +1388,29 @@
                 sampleSize: roomMode ? 24 : 16, // Higher bit depth for room mode
                 echoCancellation: !roomMode, // Disable echo cancellation in room mode
                 noiseSuppression: !roomMode, // Disable noise suppression in room mode
-                autoGainControl: !roomMode // Disable auto gain in room mode
+                autoGainControl: !roomMode, // Disable auto gain in room mode
+                latency: roomMode ? 0.1 : 0.01, // Higher latency for better quality in room mode
+                volume: roomMode ? 1.0 : 0.8 // Higher volume for room mode
               },
               video: false
             };
 
+            audioProcessingStatus.textContent = "Initializing...";
+            
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            audioProcessingStatus.textContent = "Processing...";
 
             gainNode = audioContext.createGain();
             gainNode.gain.value = volumeControl.value;
 
             analyser = audioContext.createAnalyser();
             analyser.fftSize = roomMode ? 512 : 256; // Larger FFT for room mode
+            analyser.smoothingTimeConstant = roomMode ? 0.8 : 0.5; // Smoother visualization for room mode
 
             microphone = audioContext.createMediaStreamSource(stream);
 
-            if (audioContext.createAudioWorklet) {
+            // Use AudioWorklet for better performance if available
+            if (audioContext.audioWorklet && !isAndroid()) {
               try {
                 const blob = new Blob([
                   `class AudioProcessor extends AudioWorkletProcessor {
@@ -1408,15 +1431,18 @@
                 const workletNode = new AudioWorkletNode(audioContext, "audio-processor");
                 microphone.connect(workletNode);
                 workletNode.connect(analyser);
+                audioProcessingStatus.textContent = "Using AudioWorklet (optimal)";
               } catch (e) {
                 console.warn("AudioWorklet not available, using script processor");
                 const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
                 microphone.connect(scriptNode);
                 scriptNode.connect(analyser);
+                audioProcessingStatus.textContent = "Using ScriptProcessor (legacy)";
               }
             } else {
               microphone.connect(gainNode);
               gainNode.connect(analyser);
+              audioProcessingStatus.textContent = isAndroid() ? "Using basic processing (Android)" : "Using basic processing";
             }
 
             analyser.connect(audioContext.destination);
@@ -1450,6 +1476,7 @@
           } catch (error) {
             console.error("Microphone error:", error);
             status.innerHTML = `<span style="color:red;">Microphone error: ${error.message}</span>`;
+            audioProcessingStatus.textContent = "Error: " + error.message;
           }
         }
 
@@ -1473,6 +1500,7 @@
             startMicBtn.disabled = false;
             stopMicBtn.disabled = true;
             status.innerHTML = "Microphone stopped.";
+            audioProcessingStatus.textContent = "Inactive";
           } catch (err) {
             console.error("Error stopping microphone:", err);
           }
@@ -1519,7 +1547,7 @@
             canvasCtx.fillStyle = "rgb(200, 200, 200)";
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const barWidth = (canvas.width / bufferLength) * 2.5;
+            const barWidth = (canvas.width / bufferLength) * (roomMode ? 3 : 2.5);
             let x = 0;
 
             for (let i = 0; i < bufferLength; i++) {
