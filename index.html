@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <title>Local Language Speech to Text</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Room-Wide Speech to Text</title>
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#2c3e50" />
     <style>
@@ -26,8 +23,7 @@
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         line-height: 1.6;
         margin: 0;
         padding: 0;
@@ -112,6 +108,11 @@
         color: white;
       }
 
+      #roomModeBtn {
+        background-color: #673ab7;
+        color: white;
+      }
+
       button:hover {
         opacity: 0.9;
       }
@@ -149,10 +150,6 @@
         font-size: 1rem;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-      }
-
-      .text-display {
-        font-size: 1rem;
       }
 
       .notes-display {
@@ -256,15 +253,9 @@
       }
 
       @keyframes pulse {
-        0% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.2);
-        }
-        100% {
-          transform: scale(1);
-        }
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
       }
 
       .offline-status {
@@ -376,9 +367,7 @@
       }
 
       @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        to { transform: rotate(360deg); }
       }
 
       .alert {
@@ -407,14 +396,17 @@
       }
 
       @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateX(-50%) translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+
+      .room-mode-indicator {
+        background-color: #673ab7;
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        text-align: center;
       }
 
       @media (min-width: 768px) {
@@ -464,14 +456,17 @@
         }
       }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <h1>Local Language Speech to Text</h1>
+      <h1>Room-Wide Speech to Text</h1>
 
       <div class="android-warning" id="androidWarning">
-        <strong>Note for Android Users:</strong> For best results, use Chrome
-        browser and ensure you have the language pack installed.
+        <strong>Note for Android Users:</strong> For best results, use Chrome browser and ensure you have the language pack installed.
+      </div>
+
+      <div id="roomModeIndicator" class="room-mode-indicator" style="display: none;">
+        <strong>Room Mode Active:</strong> Enhanced microphone settings for room-wide listening
       </div>
 
       <div class="status" id="status">
@@ -482,6 +477,7 @@
         <button id="toggleBtn">Pause Listening</button>
         <button id="addNoteBtn">Add as Note</button>
         <button id="clearBtn">Clear All</button>
+        <button id="roomModeBtn">Enable Room Mode</button>
         <button id="exportBtn">Export Notes</button>
         <button id="importBtn">Import Notes</button>
         <button id="googleTranslateBtn">Google Translate</button>
@@ -608,8 +604,7 @@
       </div>
     </div>
     <footer>
-      Note: Speech recognition and translation require internet, but notes work
-      offline.
+      Note: Speech recognition and translation require internet, but notes work offline.
     </footer>
 
     <div id="offlineIndicator" class="offline-status" style="display: none">
@@ -618,18 +613,7 @@
 
     <script>
       // Language direction mapping
-      const rtlLanguages = [
-        "ar",
-        "fa",
-        "he",
-        "ur",
-        "ps",
-        "ku",
-        "sd",
-        "dv",
-        "yi",
-        "ha",
-      ];
+      const rtlLanguages = ["ar", "fa", "he", "ur", "ps", "ku", "sd", "dv", "yi", "ha"];
 
       // Check online status
       function updateOnlineStatus() {
@@ -734,52 +718,46 @@
 
       async function exportAsDocx(notes) {
         try {
-          const { default: docx } = await import(
-            "https://cdn.jsdelivr.net/npm/docx@7.8.2/+esm"
-          );
+          const { default: docx } = await import("https://cdn.jsdelivr.net/npm/docx@7.8.2/+esm");
           const { Document, Paragraph, TextRun, Packer } = docx;
 
           const doc = new Document({
-            sections: [
-              {
-                properties: {},
-                children: [
+            sections: [{
+              properties: {},
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Speech to Text Notes Export",
+                      bold: true,
+                      size: 28,
+                    }),
+                  ],
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Exported on: ${new Date().toLocaleString()}`,
+                      size: 22,
+                      color: "666666",
+                    }),
+                  ],
+                }),
+                new Paragraph({ text: "" }),
+                ...notes.flatMap((note) => [
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: "Speech to Text Notes Export",
-                        bold: true,
-                        size: 28,
-                      }),
-                    ],
-                  }),
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: `Exported on: ${new Date().toLocaleString()}`,
-                        size: 22,
-                        color: "666666",
+                        text: note.text,
+                        size: 24,
+                        rightToLeft: rtlLanguages.includes(note.language?.split("-")[0]),
                       }),
                     ],
                   }),
                   new Paragraph({ text: "" }),
-                  ...notes.flatMap((note) => [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: note.text,
-                          size: 24,
-                          rightToLeft: rtlLanguages.includes(
-                            note.language?.split("-")[0]
-                          ),
-                        }),
-                      ],
-                    }),
-                    new Paragraph({ text: "" }),
-                  ]),
-                ],
-              },
-            ],
+                ]),
+              ],
+            }],
           });
 
           const blob = await Packer.toBlob(doc);
@@ -817,9 +795,7 @@
 
       async function importDocxFile(file) {
         try {
-          const { default: mammoth } = await import(
-            "https://cdn.jsdelivr.net/npm/mammoth@1.4.0/+esm"
-          );
+          const { default: mammoth } = await import("https://cdn.jsdelivr.net/npm/mammoth@1.4.0/+esm");
 
           const arrayBuffer = await new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -849,9 +825,7 @@
           return "";
         }
 
-        const validLangs = [
-          ...document.getElementById("targetLanguage").options,
-        ].map((opt) => opt.value);
+        const validLangs = [...document.getElementById("targetLanguage").options].map((opt) => opt.value);
         if (!validLangs.includes(targetLang)) {
           console.error(`Invalid target language: ${targetLang}`);
           return text;
@@ -884,8 +858,7 @@
             }),
           });
 
-          if (!response.ok)
-            throw new Error(`HTTP error! status: ${response.status}`);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const data = await response.json();
           return data.translatedText || null;
         } catch (error) {
@@ -915,13 +888,10 @@
 
       async function translateMyMemoryChunk(chunk, targetLang) {
         const response = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-            chunk
-          )}&langpair=auto|${targetLang}`
+          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=auto|${targetLang}`
         );
 
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         return data.responseData?.translatedText || chunk;
       }
@@ -1028,8 +998,7 @@
       async function checkLanguageSupport(languageCode) {
         if (!("webkitSpeechRecognition" in window)) return false;
 
-        const tempRecognition = new (window.SpeechRecognition ||
-          window.webkitSpeechRecognition)();
+        const tempRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         tempRecognition.lang = languageCode;
 
         return new Promise((resolve) => {
@@ -1069,36 +1038,16 @@
 
       function openGoogleTranslate(text, sourceLang, targetLang) {
         const langMap = {
-          am: "am",
-          ti: "ti",
-          om: "om",
-          so: "so",
-          ha: "ha",
-          sw: "sw",
-          en: "en",
-          es: "es",
-          fr: "fr",
-          de: "de",
-          it: "it",
-          pt: "pt",
-          ru: "ru",
-          ar: "ar",
-          fa: "fa",
-          hi: "hi",
-          bn: "bn",
-          pa: "pa",
-          ja: "ja",
-          ko: "ko",
-          zh: "zh-CN",
-          "zh-TW": "zh-TW",
+          am: "am", ti: "ti", om: "om", so: "so", ha: "ha", sw: "sw",
+          en: "en", es: "es", fr: "fr", de: "de", it: "it", pt: "pt", ru: "ru",
+          ar: "ar", fa: "fa", hi: "hi", bn: "bn", pa: "pa", ja: "ja", ko: "ko",
+          zh: "zh-CN", "zh-TW": "zh-TW"
         };
 
         const sourceCode = langMap[sourceLang.split("-")[0]] || "auto";
         const targetCode = langMap[targetLang] || "en";
 
-        const url = `https://translate.google.com/?sl=${sourceCode}&tl=${targetCode}&text=${encodeURIComponent(
-          text
-        )}&op=translate`;
+        const url = `https://translate.google.com/?sl=${sourceCode}&tl=${targetCode}&text=${encodeURIComponent(text)}&op=translate`;
         window.open(url, "_blank");
       }
 
@@ -1110,8 +1059,9 @@
         const clearBtn = document.getElementById("clearBtn");
         const exportBtn = document.getElementById("exportBtn");
         const importBtn = document.getElementById("importBtn");
-        const googleTranslateBtn =
-          document.getElementById("googleTranslateBtn");
+        const googleTranslateBtn = document.getElementById("googleTranslateBtn");
+        const roomModeBtn = document.getElementById("roomModeBtn");
+        const roomModeIndicator = document.getElementById("roomModeIndicator");
         const status = document.getElementById("status");
         const languageSelect = document.getElementById("languageSelect");
         const translateBtn = document.getElementById("translateBtn");
@@ -1149,6 +1099,7 @@
         let recognition;
         let isListening = false;
         let isAutoListening = true;
+        let isRoomMode = false;
         let finalTranscript = "";
         let audioContext;
         let microphone;
@@ -1161,10 +1112,7 @@
         let lastFinalTranscript = "";
 
         // Check for browser support
-        if (
-          !("webkitSpeechRecognition" in window) &&
-          !("SpeechRecognition" in window)
-        ) {
+        if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
           status.innerHTML =
             '<span style="color:red;">Speech recognition not supported in your browser. Try Chrome or Edge.</span>';
           toggleBtn.disabled = true;
@@ -1174,8 +1122,7 @@
 
         // Initialize recognition
         function initRecognition() {
-          const SpeechRecognition =
-            window.SpeechRecognition || window.webkitSpeechRecognition;
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
           recognition = new SpeechRecognition();
 
           recognition.continuous = true;
@@ -1198,10 +1145,7 @@
 
               if (result.isFinal) {
                 const trimmedTranscript = transcript.trim();
-                if (
-                  !isAndroidDevice ||
-                  !lastFinalTranscript.includes(trimmedTranscript)
-                ) {
+                if (!isAndroidDevice || !lastFinalTranscript.includes(trimmedTranscript)) {
                   newFinalTranscript += transcript + " ";
                   lastFinalTranscript = newFinalTranscript;
                 }
@@ -1269,8 +1213,7 @@
                 errorMessage = "Network error occurred.";
                 break;
               case "language-not-supported":
-                errorMessage =
-                  "Selected language not supported on this device.";
+                errorMessage = "Selected language not supported on this device.";
                 if (isAndroid()) {
                   const fallbackLang = "en-US";
                   languageSelect.value = fallbackLang;
@@ -1290,8 +1233,7 @@
             let retryDelay = 500;
             if (event.error === "no-speech") retryDelay = 1000;
             else if (event.error === "network") retryDelay = 2000;
-            else if (event.error === "language-not-supported")
-              retryDelay = 1500;
+            else if (event.error === "language-not-supported") retryDelay = 1500;
 
             setTimeout(() => {
               if (isAutoListening) recognition.start();
@@ -1303,19 +1245,14 @@
           requestAnimationFrame(() => {
             if (final || interim) {
               textDisplay.innerHTML =
-                final +
-                (interim
-                  ? '<span style="color:#aaa;">' + interim + "</span>"
-                  : "");
+                final + (interim ? '<span style="color:#aaa;">' + interim + "</span>" : "");
             }
           });
         }
 
         async function setInitialLanguage() {
           const userLang = navigator.language || "en-US";
-          const availableLangs = Array.from(languageSelect.options).map(
-            (opt) => opt.value
-          );
+          const availableLangs = Array.from(languageSelect.options).map((opt) => opt.value);
 
           const supportedLangs = [];
           for (const lang of availableLangs) {
@@ -1330,9 +1267,7 @@
             selectedLang = userLang;
           } else {
             const baseLang = userLang.split("-")[0];
-            const matchingLang = supportedLangs.find((lang) =>
-              lang.startsWith(baseLang)
-            );
+            const matchingLang = supportedLangs.find((lang) => lang.startsWith(baseLang));
             if (matchingLang) {
               selectedLang = matchingLang;
             } else if (supportedLangs.length > 0) {
@@ -1376,9 +1311,7 @@
         async function updateAudioInputs() {
           try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const audioInputs = devices.filter(
-              (device) => device.kind === "audioinput"
-            );
+            const audioInputs = devices.filter((device) => device.kind === "audioinput");
 
             while (audioInputSelect.options.length > 1) {
               audioInputSelect.remove(1);
@@ -1387,8 +1320,7 @@
             audioInputs.forEach((device) => {
               const option = document.createElement("option");
               option.value = device.deviceId;
-              option.text =
-                device.label || `Microphone ${audioInputSelect.options.length}`;
+              option.text = device.label || `Microphone ${audioInputSelect.options.length}`;
               audioInputSelect.appendChild(option);
             });
           } catch (err) {
@@ -1397,15 +1329,11 @@
         }
 
         updateAudioInputs();
-        navigator.mediaDevices.addEventListener(
-          "devicechange",
-          updateAudioInputs
-        );
+        navigator.mediaDevices.addEventListener("devicechange", updateAudioInputs);
 
         function initAudioContext() {
           try {
-            audioContext = new (window.AudioContext ||
-              window.webkitAudioContext)();
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
             console.log("Audio context created.");
             return true;
           } catch (e) {
@@ -1416,8 +1344,10 @@
           }
         }
 
-        startMicBtn.addEventListener("click", async function () {
+        // Enhanced microphone setup for room mode
+        async function setupMicrophone(roomMode = false) {
           try {
+            // First stop any existing microphone
             if (isMicActive) {
               if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 mediaRecorder.stop();
@@ -1425,39 +1355,42 @@
               if (microphone) microphone.disconnect();
             }
 
+            // Initialize audio context if needed
             if (!audioContext && !initAudioContext()) {
               return;
             }
 
-            const deviceId =
-              audioInputSelect.value === "default"
-                ? undefined
-                : audioInputSelect.value;
+            // Get selected device ID
+            const deviceId = audioInputSelect.value === "default" ? undefined : audioInputSelect.value;
 
-            const stream = await navigator.mediaDevices.getUserMedia({
+            // Configure audio constraints based on room mode
+            const constraints = {
               audio: {
                 deviceId: deviceId,
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                channelCount: 1,
+                channelCount: roomMode ? { ideal: 2 } : 1, // Stereo for room mode
+                sampleRate: roomMode ? 48000 : 44100, // Higher sample rate for room mode
+                sampleSize: roomMode ? 24 : 16, // Higher bit depth for room mode
+                echoCancellation: !roomMode, // Disable echo cancellation in room mode
+                noiseSuppression: !roomMode, // Disable noise suppression in room mode
+                autoGainControl: !roomMode // Disable auto gain in room mode
               },
-              video: false,
-            });
+              video: false
+            };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
             gainNode = audioContext.createGain();
             gainNode.gain.value = volumeControl.value;
 
             analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
+            analyser.fftSize = roomMode ? 512 : 256; // Larger FFT for room mode
 
             microphone = audioContext.createMediaStreamSource(stream);
 
             if (audioContext.createAudioWorklet) {
               try {
-                const blob = new Blob(
-                  [
-                    `class AudioProcessor extends AudioWorkletProcessor {
+                const blob = new Blob([
+                  `class AudioProcessor extends AudioWorkletProcessor {
                     process(inputs, outputs) {
                       const input = inputs[0];
                       const output = outputs[0];
@@ -1467,28 +1400,17 @@
                       return true;
                     }
                   }
-                  registerProcessor('audio-processor', AudioProcessor);`,
-                  ],
-                  { type: "application/javascript" }
-                );
+                  registerProcessor('audio-processor', AudioProcessor);`
+                ], { type: "application/javascript" });
                 const url = URL.createObjectURL(blob);
 
                 await audioContext.audioWorklet.addModule(url);
-                const workletNode = new AudioWorkletNode(
-                  audioContext,
-                  "audio-processor"
-                );
+                const workletNode = new AudioWorkletNode(audioContext, "audio-processor");
                 microphone.connect(workletNode);
                 workletNode.connect(analyser);
               } catch (e) {
-                console.warn(
-                  "AudioWorklet not available, using script processor"
-                );
-                const scriptNode = audioContext.createScriptProcessor(
-                  4096,
-                  1,
-                  1
-                );
+                console.warn("AudioWorklet not available, using script processor");
+                const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
                 microphone.connect(scriptNode);
                 scriptNode.connect(analyser);
               }
@@ -1498,7 +1420,7 @@
             }
 
             analyser.connect(audioContext.destination);
-            setupVisualizer();
+            setupVisualizer(roomMode);
 
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
@@ -1521,10 +1443,18 @@
             stopMicBtn.disabled = false;
             status.innerHTML =
               '<span class="listening-indicator"></span>Microphone active - recording audio.';
+            
+            if (roomMode) {
+              status.innerHTML += ' (Room Mode)';
+            }
           } catch (error) {
             console.error("Microphone error:", error);
             status.innerHTML = `<span style="color:red;">Microphone error: ${error.message}</span>`;
           }
+        }
+
+        startMicBtn.addEventListener("click", async function () {
+          await setupMicrophone(isRoomMode);
         });
 
         stopMicBtn.addEventListener("click", function () {
@@ -1548,13 +1478,24 @@
           }
         });
 
+        roomModeBtn.addEventListener("click", function () {
+          isRoomMode = !isRoomMode;
+          this.textContent = isRoomMode ? "Disable Room Mode" : "Enable Room Mode";
+          roomModeIndicator.style.display = isRoomMode ? "block" : "none";
+          
+          if (isMicActive) {
+            stopMicBtn.click();
+            setTimeout(() => startMicBtn.click(), 300);
+          }
+        });
+
         volumeControl.addEventListener("input", function () {
           if (gainNode) {
             gainNode.gain.value = this.value;
           }
         });
 
-        function setupVisualizer() {
+        function setupVisualizer(roomMode = false) {
           const canvas = document.createElement("canvas");
           canvas.width = audioVisualizer.offsetWidth;
           canvas.height = audioVisualizer.offsetHeight;
@@ -1582,16 +1523,11 @@
             let x = 0;
 
             for (let i = 0; i < bufferLength; i++) {
-              const barHeight = dataArray[i] / 2;
+              const barHeight = dataArray[i] / (roomMode ? 1.5 : 2);
               const hue = (i / bufferLength) * 360;
 
               canvasCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-              canvasCtx.fillRect(
-                x,
-                canvas.height - barHeight,
-                barWidth,
-                barHeight
-              );
+              canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
 
               x += barWidth + 1;
             }
@@ -1602,7 +1538,7 @@
 
         window.addEventListener("resize", function () {
           if (isMicActive) {
-            setupVisualizer();
+            setupVisualizer(isRoomMode);
           }
         });
 
@@ -1641,11 +1577,7 @@
         });
 
         addNoteBtn.addEventListener("click", async function () {
-          if (
-            textDisplay.textContent.trim() &&
-            textDisplay.textContent.trim() !==
-              "Your transcribed text will appear here..."
-          ) {
+          if (textDisplay.textContent.trim() && textDisplay.textContent.trim() !== "Your transcribed text will appear here...") {
             const noteText = textDisplay.textContent.trim();
             const currentLanguage = languageSelect.value;
             try {
@@ -1681,10 +1613,7 @@
         googleTranslateBtn.addEventListener("click", function () {
           const textToTranslate = textDisplay.textContent.trim();
 
-          if (
-            !textToTranslate ||
-            textToTranslate === "Your transcribed text will appear here..."
-          ) {
+          if (!textToTranslate || textToTranslate === "Your transcribed text will appear here...") {
             showAlert("Please enter some text to translate", "warning");
             return;
           }
@@ -1713,25 +1642,19 @@
 
             document.body.appendChild(exportDialog);
 
-            document
-              .getElementById("exportDocx")
-              .addEventListener("click", async function () {
-                await exportAsDocx(notes);
-                document.body.removeChild(exportDialog);
-              });
+            document.getElementById("exportDocx").addEventListener("click", async function () {
+              await exportAsDocx(notes);
+              document.body.removeChild(exportDialog);
+            });
 
-            document
-              .getElementById("exportTxt")
-              .addEventListener("click", async function () {
-                await exportAsTxt(notes);
-                document.body.removeChild(exportDialog);
-              });
+            document.getElementById("exportTxt").addEventListener("click", async function () {
+              await exportAsTxt(notes);
+              document.body.removeChild(exportDialog);
+            });
 
-            document
-              .getElementById("exportCancel")
-              .addEventListener("click", function () {
-                document.body.removeChild(exportDialog);
-              });
+            document.getElementById("exportCancel").addEventListener("click", function () {
+              document.body.removeChild(exportDialog);
+            });
           } catch (error) {
             console.error("Export failed:", error);
             alert("Failed to export notes.");
@@ -1797,11 +1720,7 @@
         });
 
         translateBtn.addEventListener("click", async function () {
-          if (
-            !textDisplay.textContent.trim() ||
-            textDisplay.textContent.trim() ===
-              "Your transcribed text will appear here..."
-          ) {
+          if (!textDisplay.textContent.trim() || textDisplay.textContent.trim() === "Your transcribed text will appear here...") {
             showAlert("Please enter text to translate", "warning");
             return;
           }
@@ -1813,8 +1732,7 @@
 
           try {
             translateBtn.disabled = true;
-            translateBtn.innerHTML =
-              '<span class="translation-loading"></span>Translating...';
+            translateBtn.innerHTML = '<span class="translation-loading"></span>Translating...';
             translationResult.textContent = "";
 
             const translation = await translateText(
@@ -1827,8 +1745,7 @@
           } catch (error) {
             console.error("Translation failed:", error);
             showAlert("Translation failed. Please try again.", "error");
-            translationResult.textContent =
-              "Translation error: " + error.message;
+            translationResult.textContent = "Translation error: " + error.message;
           } finally {
             translateBtn.disabled = false;
             translateBtn.textContent = "Translate Text";
@@ -1875,43 +1792,31 @@
             }
           });
 
-          noteItem.addEventListener(
-            "touchstart",
-            function (e) {
-              touchStartX = e.changedTouches[0].screenX;
-              noteItem.classList.add("swiping");
-            },
-            { passive: true }
-          );
+          noteItem.addEventListener("touchstart", function (e) {
+            touchStartX = e.changedTouches[0].screenX;
+            noteItem.classList.add("swiping");
+          }, { passive: true });
 
-          noteItem.addEventListener(
-            "touchmove",
-            function (e) {
-              touchEndX = e.changedTouches[0].screenX;
-              const diff = touchStartX - touchEndX;
-              if (diff > 30) {
-                noteItem.style.transform = `translateX(${-diff}px)`;
-                if (diff > 100) {
-                  deleteBtn.style.opacity = "1";
-                }
-              }
-            },
-            { passive: true }
-          );
-
-          noteItem.addEventListener(
-            "touchend",
-            function () {
-              noteItem.classList.remove("swiping");
-              const diff = touchStartX - touchEndX;
+          noteItem.addEventListener("touchmove", function (e) {
+            touchEndX = e.changedTouches[0].screenX;
+            const diff = touchStartX - touchEndX;
+            if (diff > 30) {
+              noteItem.style.transform = `translateX(${-diff}px)`;
               if (diff > 100) {
-                deleteBtn.click();
-              } else {
-                noteItem.style.transform = "";
+                deleteBtn.style.opacity = "1";
               }
-            },
-            { passive: true }
-          );
+            }
+          }, { passive: true });
+
+          noteItem.addEventListener("touchend", function () {
+            noteItem.classList.remove("swiping");
+            const diff = touchStartX - touchEndX;
+            if (diff > 100) {
+              deleteBtn.click();
+            } else {
+              noteItem.style.transform = "";
+            }
+          }, { passive: true });
 
           noteItem.appendChild(noteText);
           noteItem.appendChild(deleteBtn);
@@ -1929,10 +1834,7 @@
         document.addEventListener("visibilitychange", function () {
           if (document.visibilityState === "hidden" && isListening) {
             recognition.stop();
-          } else if (
-            document.visibilityState === "visible" &&
-            isAutoListening
-          ) {
+          } else if (document.visibilityState === "visible" && isAutoListening) {
             setTimeout(() => recognition.start(), 100);
           }
         });
@@ -1992,5 +1894,5 @@
         }, 10000);
       });
     </script>
-  </body>
+</body>
 </html>
